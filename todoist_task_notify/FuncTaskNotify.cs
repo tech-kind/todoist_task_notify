@@ -17,6 +17,7 @@ namespace todoist_task_notify
         {
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
+            // Tokenを環境変数から取得
             var todoist_token = Environment.GetEnvironmentVariable("TODOIST_TOKEN",
                 EnvironmentVariableTarget.Process);
             var line_token = Environment.GetEnvironmentVariable("LINE_TOKEN",
@@ -27,8 +28,11 @@ namespace todoist_task_notify
                 return;
             }
 
-            var todoist_client = new TodoistRestClient("https://api.todoist.com/rest/v1", todoist_token);
-            var todoist_request = todoist_client.CreateRequest("2279337164");
+            // Todoistからタスクを取得する
+            var todoist_client = new RestClient("https://api.todoist.com/rest/v1");
+            todoist_client.AddDefaultHeader("Authorization", $"Bearer {todoist_token}");
+            var todoist_request = new RestRequest("tasks", Method.GET)
+                .AddQueryParameter("project_id", "2279337164");
             var todoist_response = todoist_client.Execute(todoist_request);
             if (todoist_response.StatusCode != System.Net.HttpStatusCode.OK)
             {
@@ -40,70 +44,20 @@ namespace todoist_task_notify
             message.AppendLine();
             foreach (var item in content.Select((value, index) => new {value, index}))
             {
-                message.AppendLine($"[{item.index}] {item.value.content}");
+                message.AppendLine($"[{item.index + 1}] {item.value.content}");
             }
 
-            var line_client = new LineRestClient("https://notify-api.line.me/api", line_token);
-            var line_request = line_client.CreateRequest(message.ToString());
+            // Lineにタスクを通知する
+            var line_client = new RestClient("https://notify-api.line.me/api");
+            line_client.AddDefaultHeader("Authorization", $"Bearer {line_token}");
+            var line_request = new RestRequest("notify", Method.POST)
+                .AddParameter("message", message);
             var line_response = line_client.Execute(line_request);
             if (line_response.StatusCode != System.Net.HttpStatusCode.OK)
             {
                 log.LogWarning("Http status code error!!");
                 return;
             }
-        }
-    }
-
-    public class RestClientBase
-    {
-        private readonly RestClient _client;
-
-        public RestClientBase(string url, string access_token)
-        {
-            _client = new RestClient(url);
-            _client.AddDefaultHeader("Authorization", $"Bearer {access_token}");
-        }
-
-        public virtual IRestRequest CreateRequest(string param)
-        {
-            return new RestRequest();
-        }
-
-        public virtual IRestResponse Execute(IRestRequest request)
-        {
-            return _client.Execute(request);
-        }
-    }
-
-    public class TodoistRestClient : RestClientBase
-    {
-        public TodoistRestClient(string url, string access_token)
-            : base(url, access_token)
-        {
-
-        }
-
-        public override IRestRequest CreateRequest(string param)
-        {
-            var request = new RestRequest("tasks", Method.GET)
-                .AddQueryParameter("project_id", param);
-            return request;
-        }
-    }
-
-    public class LineRestClient : RestClientBase
-    {
-        public LineRestClient(string url, string access_token)
-            : base (url, access_token)
-        {
-
-        }
-
-        public override IRestRequest CreateRequest(string param)
-        {
-            var request = new RestRequest("notify", Method.POST)
-                .AddParameter("message", param);
-            return request;
         }
     }
 

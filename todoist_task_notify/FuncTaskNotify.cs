@@ -24,6 +24,7 @@ namespace todoist_task_notify
             if (string.IsNullOrEmpty(todoist_token) || string.IsNullOrEmpty(line_token))
             {
                 log.LogWarning("Token error!!");
+                return;
             }
 
             var todoist_client = new TodoistRestClient("https://api.todoist.com/rest/v1", todoist_token);
@@ -32,6 +33,7 @@ namespace todoist_task_notify
             if (todoist_response.StatusCode != System.Net.HttpStatusCode.OK)
             {
                 log.LogWarning("Http status code error!!");
+                return;
             }
             var content = JsonConvert.DeserializeObject<List<TodoistContent>>(todoist_response.Content);
             var message = new StringBuilder();
@@ -47,6 +49,7 @@ namespace todoist_task_notify
             if (line_response.StatusCode != System.Net.HttpStatusCode.OK)
             {
                 log.LogWarning("Http status code error!!");
+                return;
             }
         }
     }
